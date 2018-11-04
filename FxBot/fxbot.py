@@ -6,7 +6,7 @@ import pandas as pd
 from pymongo import MongoClient
 import requests
 
-from xAPIConnector import *
+from .xAPIConnector import *
 
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
@@ -231,7 +231,8 @@ class Trader():
             hourmin = self.get_hour()
             day =  self.get_day()
             if day == 'Fri' and 1944 < hourmin <2000:
-                time.sleep(172800)
+                self.update_info_trades()
+                time.sleep(172750)
             try:
                 price = self.get_price()
                 self.prices.append(price)
