@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="FxBot",
-    install_requires=["pymongo"],
+    install_requires=["pymongo",'pandas','requests'],
     version="0.0.1",
     author="Rastislav_Baran",
     author_email="baranrastislav@gmail.com",
