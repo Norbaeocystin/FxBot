@@ -218,7 +218,7 @@ class Trader():
             '''
             response = {1:'buy',-2:'sell'}
             result = response.get(delta//0.0010)
-            if result
+            if result:
                 return result
             else:
                 return None
