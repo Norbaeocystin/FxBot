@@ -261,7 +261,8 @@ class Trader():
                 time.sleep(0.75)
                 
 def run():
-    tr = Trader(userid = 11111111)
+    #change to your account, if real account add demo = False
+    tr = Trader(userid = 11111111, password = 'blablabla')
     tr.scan_fx()
 
 if __name__ == "__main__":
