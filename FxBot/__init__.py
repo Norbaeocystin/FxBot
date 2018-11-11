@@ -1,2 +1,2 @@
-import .fxbot
-import .xAPIConnector
+from .fxbot import *
+from .xAPIConnector import *
