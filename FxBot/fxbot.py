@@ -250,9 +250,8 @@ class Trader():
                     if tradeResponse['status']:
                         result['Order'] = tradeResponse['returnData']['order']
                         self.logger.error(result)
-                '''if not self.linRegFilter:
-                    FxData.insert(result)
-                    self.logger.error('One loop done')'''
+                FxData.insert(result)
+                self.logger.error('One loop done')
                 time.sleep(0.8)
                 if len(self.prices)>7200:
                     del self.prices[:3600]
