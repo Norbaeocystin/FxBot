@@ -36,6 +36,9 @@ def get_3600(time):
 
 
 def exporting():
+    '''
+    save excel file filled with data about executed trades
+    '''
     data = list(FxData.find({ 'order': { '$exists': True }},{'_id':0}))
     df =  pd.DataFrame(data)
     df.to_csv('eurusddata.csv', sep = ',')
@@ -46,6 +49,9 @@ def exporting():
 
     
 def get_json():
+    '''
+    return list of orders info dictionaries
+    '''
     return list(FxData.find({ 'order': { '$exists': True }},{'_id':0}))
 
 class Trader():
