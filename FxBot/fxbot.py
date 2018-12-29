@@ -23,41 +23,51 @@ HEADER ={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWeb
 
 def get_info_about_trades():
     '''
-    returns profitable trades and unprofitable
+    returns: <dict>, profitable trades and unprofitable with sum profits and losses as dict
     '''
-    return FxData.aggregate([{'$facet':{'loss':[{ '$match': { 'order': { '$exists': True }, 'profit' :{'$lt':12} }},{'$count': "No"}], 'profitable':[{ '$match': { 'order': { '$exists': True }, 'profit' :{'$gt':12} }},{'$count': "No"}], 'PL':[{ '$match': { 'order': { '$exists': True } }},{ '$group': { '_id' : None, 'sum' : { '$sum': "$profit" }}}]}}]).next()
+    return FxData.aggregate([{'$facet':{'loss':[{ '$match': { 'order': { '$exists': True }, 'profit' :{'$lt':12} }},{'$count': "No"}], 
+                                        'profitable':[{ '$match': { 'order': { '$exists': True }, 'profit' :{'$gt':12} }},{'$count': "No"}], 
+                                        'PL':[{ '$match': { 'order': { '$exists': True } }},{ '$group': { '_id' : None, 'sum' : { '$sum': "$profit" }}}]}
+                             }]).next()
 
 def get_trades():
     '''
-    returns trades
+    function which retuns list of dictionaries with data about closed trades
+    returns: <list>, list of dictionaries with data about closed trades
     '''
-    return [item for item in FxData.aggregate([{ '$match': { 'order': { '$exists': True }}}])]
+    return list(FxData.aggregate([{ '$match': { 'order': { '$exists': True }}}]))
 
-def get_3600(time):
+def get_structured_data(time = 100, limit = 0):
     '''
-    for opening time of trade will return price data from 3600 before to the time of trade
+    Function to get structured data from MongoDB, please it can take time ...
+    returns: <tuple>, tuple: <numpy.array>, <numpy.array> or if you want: features, labels
+        
+    args:
+        time: <int>, how long features ( in this case timeserie) will be long in seconds
+        limit: <int>, positive integer to limit number of trades if necessary
     '''
-    return [element.get('Price') for element in FxData.aggregate([{'$match': { 'Time':{ '$gt': time - 3600, '$lt': time }}}])]
-
-
-def exporting():
-    '''
-    save excel file filled with data about executed trades
-    '''
-    data = list(FxData.find({ 'order': { '$exists': True }},{'_id':0}))
-    df =  pd.DataFrame(data)
-    df.to_csv('eurusddata.csv', sep = ',')
-    writer = pd.ExcelWriter('eurusddata.xlsx', engine='xlsxwriter')
-    df.to_excel(writer, sheet_name='Sheet1')
-    writer.save()
-
-
-    
-def get_json():
-    '''
-    return list of orders info dictionaries
-    '''
-    return list(FxData.find({ 'order': { '$exists': True }},{'_id':0}))
+    trades = get_trades()
+    if limit != 0 and limit > 0:
+        trades = trades[:limit]
+    #generate labels
+    profits = [item.get('profit') for item in trades]
+    logger.debug('Gets {} trades'.format(len(profits)))
+    #convert list profits and losses to binary
+    labels = np.array([[(0 if item < 0 else 1)] for item in profits]).astype(np.uint8)
+    # features
+    times = [item.get('Time') for item in trades]
+    features = []
+    logger.debug('Labels done. Working on features')
+    # fetching data for features and structuring them
+    for ind, item in enumerate(times):
+        # lower or equal time that in item, only price to get, reversed it by sorting, limit size of data and reversed it again 
+        x = list(FxData.find({'Time':{'$lte':item}},{"Price":1, '_id':0}).sort('Time', pymongo.DESCENDING).limit(time))[::-1]
+        features.append([item.get('Price') for item in x])
+        if ind % 10 == 0:
+            logger.debug('Done structuring {} trades'.format(ind))
+    features = np.array(features).astype(np.float32)
+    logger.debug('Your data are prepared')
+    return features, labels
 
 class Trader():
 
