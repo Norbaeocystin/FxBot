@@ -10,6 +10,8 @@ from .xAPIConnector import *
 
 logger = logging.getLogger()
 logger.setLevel(logging.ERROR)
+
+#connection to MongoDB
 client = MongoClient('localhost')
 
 db = client.Bot
@@ -20,6 +22,9 @@ FxData = db.FxData
 HEADER ={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36'}
 
 def get_info_about_trades():
+    '''
+    returns profitable trades and unprofitable
+    '''
     return FxData.aggregate([{'$facet':{'loss':[{ '$match': { 'order': { '$exists': True }, 'profit' :{'$lt':12} }},{'$count': "No"}], 'profitable':[{ '$match': { 'order': { '$exists': True }, 'profit' :{'$gt':12} }},{'$count': "No"}], 'PL':[{ '$match': { 'order': { '$exists': True } }},{ '$group': { '_id' : None, 'sum' : { '$sum': "$profit" }}}]}}]).next()
 
 def get_trades():
@@ -56,7 +61,7 @@ def get_json():
 
 class Trader():
 
-    def __init__(self, userid= 11111, password='password', demo=True, setbet=0):
+    def __init__(self, userid= 11111, password='password', demo=True, setbet=0 , stop_loss = 0.0010, take_profit = 0.0065):
         server = 'xapia.x-station.eu'
         port = 5124
         streaming_port = 5125
@@ -73,6 +78,8 @@ class Trader():
         self.prices = []
         self.demo = demo
         self.setbet = setbet
+        self.stop_loss = stop_loss
+        self.take_profit = take_profit
 
     def get_day(self):
         '''
@@ -108,15 +115,15 @@ class Trader():
         price = tick['returnData']['ask']
         # set take profit and stop loss
         tp, sl = 0,0
-        tp = tick['returnData']['bid']-0.0065 if value == 1 else tick['returnData']['ask']+0.0065
-        sl = tick['returnData']['bid']+0.0010 if value == 1 else tick['returnData']['ask']-0.0010
+        tp = tick['returnData']['bid']- self.take_profit if value == 1 else tick['returnData']['ask'] + self.take_profit
+        sl = tick['returnData']['bid'] + self.stop_loss if value == 1 else tick['returnData']['ask'] - self.stop_loss
         trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": value,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": sl,"tp": tp,"symbol": "EURUSD","type": 0,"volume": volume}})
         tradeResponse = apiClient.execute(trade)
         del self.prices[:]
         apiClient.disconnect()
         return tradeResponse
 
-    def buy(self, volume = 1, customComment = '', tp = 0.0065, sl = 0.001):
+    def buy(self, volume = 1, customComment = ''):
         '''
         opens trade if value = 0 buy if 1 sell, also returns response from XTB api
         '''
@@ -129,13 +136,14 @@ class Trader():
         # get price for opening trade
         price = tick['returnData']['ask']
         # set take profit and stop loss
-        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 0,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price - sl,"tp": price + tp,"symbol": "EURUSD","type": 0,"volume": volume}})
+        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 0,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price - self.stop_loss,
+                                                                   "tp": price + self.take_profit,"symbol": "EURUSD","type": 0,"volume": volume}})
         tradeResponse = apiClient.execute(trade)
         del self.prices[:]
         apiClient.disconnect()
         return tradeResponse
 
-    def sell(self, volume = 1, customComment = '', tp = 0.0065, sl = 0.001):
+    def sell(self, volume = 1, customComment = ''):
         '''
         opens trade if value = 0 buy if 1 sell, also returns response from XTB api
         '''
@@ -148,7 +156,8 @@ class Trader():
         # get price for opening trade
         price = tick['returnData']['bid']
         # set take profit and stop loss
-        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 1,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price + sl,"tp": price - tp,"symbol": "EURUSD","type": 0,"volume": volume}})
+        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 1,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price + self.stop_loss,
+                                                                   "tp": price - self.take_profit,"symbol": "EURUSD","type": 0,"volume": volume}})
         tradeResponse = apiClient.execute(trade)
         del self.prices[:]
         apiClient.disconnect()
