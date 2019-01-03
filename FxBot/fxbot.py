@@ -235,7 +235,7 @@ class Trader():
         '''
         checks data if there is a signal
         '''
-        if len(self.prices) > 3600:
+        if len(self.prices) > 3601:
             delta = self.prices[-1]-self.prices[-1200]
             '''
             here will be good to implement control by linear regression
@@ -243,6 +243,7 @@ class Trader():
             '''
             response = {1:'buy',-2:'sell'}
             result = response.get(delta//0.0010)
+            #model.predict(sklearn.preprocessing.MinMaxScaler(np.array(self.prices[-3600:])))
             if result:
                 return result
             else:
