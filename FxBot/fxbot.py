@@ -235,7 +235,7 @@ class Trader():
         '''
         checks data if there is a signal
         '''
-        if len(self.prices) > 3601:
+        if len(self.prices) > 1300:
             delta = self.prices[-1]-self.prices[-1200]
             '''
             here will be good to implement control by linear regression
