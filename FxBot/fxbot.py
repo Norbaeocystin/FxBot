@@ -17,6 +17,7 @@ client = MongoClient('localhost')
 db = client.Bot
 
 FxData = db.FxData
+FxData10 = db.FxData10
 
 
 HEADER ={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36'}
@@ -71,7 +72,7 @@ def get_structured_data(time = 100, limit = 0):
 
 class Trader():
 
-    def __init__(self, userid= 11111, password='password', demo=True, setbet=0 , stop_loss = 0.0010, take_profit = 0.0065):
+    def __init__(self, userid= 11111, password='password', demo=True, setbet=0 , stop_loss = 0.0010, take_profit = 0.0065, collection = FxData):
         server = 'xapia.x-station.eu'
         port = 5144 
         streaming_port = 5145
@@ -90,6 +91,7 @@ class Trader():
         self.setbet = setbet
         self.stop_loss = stop_loss
         self.take_profit = take_profit
+        self.collection = collection
 
     def get_day(self):
         '''
@@ -210,7 +212,7 @@ class Trader():
                 result = {}
                 for element in ['order','cmd','profit','close_time']:
                     result[element] = item[element]
-                FxData.update({'Time':Time},{'$set':result})
+                self.collection.update({'Time':Time},{'$set':result})
             except:
                 logger.error('Order not found ...')
 
@@ -279,7 +281,7 @@ class Trader():
                     if tradeResponse['status']:
                         result['Order'] = tradeResponse['returnData']['order']
                         self.logger.error(result)
-                FxData.insert(result)
+                self.collection.insert(result)
                 self.logger.error('One loop done')
                 time.sleep(0.8)
                 if len(self.prices)>7200:
