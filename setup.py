@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_data={'FxBot': ['Config/*.json']},
-    entry_points={'console_scripts':['fxbot = FxBot.fxbot:run']},
+    entry_points={'console_scripts':['fxbot = FxBot.fxbot:run', 'fxbot10 = FxBot.fxbot:run10']},
     url="",
     packages=setuptools.find_packages(),
     classifiers=[
