@@ -217,7 +217,10 @@ class Trader():
     def set_bet(self):
         '''
         returns volume which will be used to open trade
+        or if setbet argument is higher than 0 in 0.01 increments will return setbet
         '''
+        if self.setbet > 0:
+            return self.setbet
         apiClient = APIClient(address=self.server, port=self.port, encrypt=True)
         loginCmd = loginCommand(self.userid, self.password)
         # execute login command
@@ -288,6 +291,12 @@ class Trader():
 def run():
     #change to your account, if real account add demo = False
     tr = Trader(userid = 11111111, password = 'blablabla')
+    tr.scan_fx()
+    
+def run10():
+    #change to your account, if real account add demo = False
+    # trying to harvest data with different take profit
+    tr = Trader(userid = 11111111, password = 'blablabla', setbet = 0.01 , stop_loss = 0.0010, take_profit = 0.0010)
     tr.scan_fx()
 
 if __name__ == "__main__":
