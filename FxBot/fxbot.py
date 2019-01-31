@@ -298,7 +298,7 @@ def run():
 def run10():
     #change to your account, if real account add demo = False
     # trying to harvest data with different take profit
-    tr = Trader(userid = 11111111, password = 'blablabla', setbet = 0.01 , stop_loss = 0.0010, take_profit = 0.0010)
+    tr = Trader(userid = 11111111, password = 'blablabla', setbet = 0.01 , stop_loss = 0.0010, take_profit = 0.0010, collection = FxData10)
     tr.scan_fx()
 
 if __name__ == "__main__":
