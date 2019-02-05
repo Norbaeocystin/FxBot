@@ -74,8 +74,8 @@ class Trader():
 
     def __init__(self, userid= 11111, password='password', demo=True, setbet=0 , stop_loss = 0.0010, take_profit = 0.0065, collection = FxData):
         server = 'xapia.x-station.eu'
-        port = 5144 
-        streaming_port = 5145
+        port = 5124 
+        streaming_port = 5125
         logging.basicConfig(level=logging.INFO, format = '%(asctime)s %(levelname)s %(message)s')
         self.logger = logging.getLogger(__name__)
         self.server = server
