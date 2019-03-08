@@ -148,8 +148,8 @@ class Trader():
         # get price for opening trade
         price = tick['returnData']['ask']
         # set take profit and stop loss
-        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 0,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price - self.stop_loss,
-                                                                   "tp": price + self.take_profit,"symbol": "EURUSD","type": 0,"volume": volume}})
+        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 0,"customComment": customComment,"expiration": 0,"order": 0,"price": round(price,5),"sl": round(price - self.stop_loss,5),
+                                                                   "tp": round(price + self.take_profit,5),"symbol": "EURUSD","type": 0,"volume": volume}})
         tradeResponse = apiClient.execute(trade)
         del self.prices[:]
         apiClient.disconnect()
@@ -168,8 +168,8 @@ class Trader():
         # get price for opening trade
         price = tick['returnData']['bid']
         # set take profit and stop loss
-        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 1,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price + self.stop_loss,
-                                                                   "tp": price - self.take_profit,"symbol": "EURUSD","type": 0,"volume": volume}})
+        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 1,"customComment": customComment,"expiration": 0,"order": 0,"price": round(price,5),"sl": round(price + self.stop_loss,5),
+                                                                   "tp": round(price - self.take_profit,5),"symbol": "EURUSD","type": 0,"volume": volume}})
         tradeResponse = apiClient.execute(trade)
         del self.prices[:]
         apiClient.disconnect()
