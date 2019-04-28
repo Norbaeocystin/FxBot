@@ -1,15 +1,21 @@
 import logging
+import numpy as np
 import time
 import traceback
 import pandas as pd
 
 from pymongo import MongoClient
 import requests
-
 from .xAPIConnector import *
 
-logger = logging.getLogger()
-logger.setLevel(logging.ERROR)
+from sklearn.preprocessing import MinMaxScaler
+#tensorflow models
+from FxModel import NNModel, Conv1NNModel, Conv1DropNNModel, normalize_maxmin
+
+#logging.getLogger('xAPIConnector').setLevel(logging.ERROR)
+logging.getLogger('pymongo').setLevel(logging.ERROR)
+logging.getLogger('requests').setLevel(logging.ERROR)
+logging.getLogger('urllib3').setLevel(logging.ERROR)
 
 #connection to MongoDB
 client = MongoClient('localhost')
@@ -17,7 +23,6 @@ client = MongoClient('localhost')
 db = client.Bot
 
 FxData = db.FxData
-FxData10 = db.FxData10
 
 
 HEADER ={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36'}
@@ -72,11 +77,15 @@ def get_structured_data(time = 100, limit = 0):
 
 class Trader():
 
-    def __init__(self, userid= 11111, password='password', demo=True, setbet=0 , stop_loss = 0.0010, take_profit = 0.0065, collection = FxData):
+    def __init__(self, userid= 11111, password='password', demo=True, setbet=0 , stop_loss = 0.0010, take_profit = 0.0065, model = False):
+        #model must be restored before 
+        self.model = False
+        if model:
+            self.model = model
         server = 'xapia.x-station.eu'
-        port = 5124 
+        port = 5124
         streaming_port = 5125
-        logging.basicConfig(level=logging.INFO, format = '%(asctime)s %(levelname)s %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format = '%(asctime)s %(levelname)s %(message)s')
         self.logger = logging.getLogger(__name__)
         self.server = server
         self.port = port
@@ -91,7 +100,6 @@ class Trader():
         self.setbet = setbet
         self.stop_loss = stop_loss
         self.take_profit = take_profit
-        self.collection = collection
 
     def get_day(self):
         '''
@@ -148,10 +156,10 @@ class Trader():
         # get price for opening trade
         price = tick['returnData']['ask']
         # set take profit and stop loss
-        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 0,"customComment": customComment,"expiration": 0,"order": 0,"price": round(price,5),"sl": round(price - self.stop_loss,5),
-                                                                   "tp": round(price + self.take_profit,5),"symbol": "EURUSD","type": 0,"volume": volume}})
+        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 0,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price - self.stop_loss,
+                                                                   "tp": price + self.take_profit,"symbol": "EURUSD","type": 0,"volume": volume}})
         tradeResponse = apiClient.execute(trade)
-        del self.prices[:]
+        del self.prices[:-2400]
         apiClient.disconnect()
         return tradeResponse
 
@@ -168,10 +176,10 @@ class Trader():
         # get price for opening trade
         price = tick['returnData']['bid']
         # set take profit and stop loss
-        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 1,"customComment": customComment,"expiration": 0,"order": 0,"price": round(price,5),"sl": round(price + self.stop_loss,5),
-                                                                   "tp": round(price - self.take_profit,5),"symbol": "EURUSD","type": 0,"volume": volume}})
+        trade = baseCommand('tradeTransaction',{"tradeTransInfo": {"cmd": 1,"customComment": customComment,"expiration": 0,"order": 0,"price": price,"sl": price + self.stop_loss,
+                                                                   "tp": price - self.take_profit,"symbol": "EURUSD","type": 0,"volume": volume}})
         tradeResponse = apiClient.execute(trade)
-        del self.prices[:]
+        del self.prices[:-2400]
         apiClient.disconnect()
         return tradeResponse
 
@@ -212,35 +220,33 @@ class Trader():
                 result = {}
                 for element in ['order','cmd','profit','close_time']:
                     result[element] = item[element]
-                self.collection.update({'Time':Time},{'$set':result})
+                FxData.update({'Time':Time},{'$set':result})
             except:
-                logger.error('Order not found ...')
+                logger.debug('Order not found ...')
+            logger.debug('Done')
 
     def set_bet(self):
         '''
         returns volume which will be used to open trade
-        or if setbet argument is higher than 0 in 0.01 increments will return setbet
         '''
-        if self.setbet > 0:
-            return self.setbet
         apiClient = APIClient(address=self.server, port=self.port, encrypt=True)
         loginCmd = loginCommand(self.userid, self.password)
-        # execute login command
+        #execute login command
         loginResponse = apiClient.execute(loginCmd)
         balanceResponse = apiClient.execute(baseCommand('getMarginLevel',dict()))
         balance = balanceResponse["returnData"]['balance']
-        volume = balance//1000
+        volume = balance//400
         volume = 1 if volume == 0 else volume
         volume = round(volume*0.01,2)
         volume = 50 if volume > 50 else volume
         apiClient.disconnect()
-        return volume
+        return  volume
 
     def check(self):
         '''
         checks data if there is a signal
         '''
-        if len(self.prices) > 1260:
+        if len(self.prices) > 3601:
             delta = self.prices[-1]-self.prices[-1200]
             '''
             here will be good to implement control by linear regression
@@ -248,7 +254,24 @@ class Trader():
             '''
             response = {1:'buy',-2:'sell'}
             result = response.get(delta//0.0010)
-            #model.predict(sklearn.preprocessing.MinMaxScaler(np.array(self.prices[-3600:])))
+            if result and self.model:
+                logger.debug('Making prediction')
+                #scale and reshape input prices
+                prices = np.array(self.prices[-3600:]).reshape(1,-1)
+                #make prediction
+                prediction = self.model.predict(prices)
+                if np.round(prediction) == True:
+                    del self.prices[:-2400]
+                    logger.debug('Prediction True')
+                    #store info about that
+                    db['Filtering'].insert({'Prediction':True, 'Timestamp':time.ctime(), 'Userid': self.userid, 'Type':result})
+                    return result
+                else:
+                    #delete prices anyway 
+                    logger.debug('Prediction False')
+                    del self.prices[:-2400]
+                    db['Filtering'].insert({'Prediction':False, 'Timestamp':time.ctime(), 'Userid': self.userid, 'Type':result})
+                    return None
             if result:
                 return result
             else:
@@ -273,6 +296,7 @@ class Trader():
                 result['Price'] = price
                 if response:
                     logger.error(response)
+                    #normally setted by set_bet()
                     bet = self.set_bet()
                     if response == 'buy':
                         tradeResponse = self.buy(volume = bet, customComment =  str(result['Time']))
@@ -280,25 +304,19 @@ class Trader():
                         tradeResponse = self.sell(volume = bet, customComment =  str(result['Time']))
                     if tradeResponse['status']:
                         result['Order'] = tradeResponse['returnData']['order']
-                        self.logger.error(result)
-                self.collection.insert(result)
-                self.logger.error('One loop done')
+                        self.logger.debug(result)
+                #FxData.insert(result)
+                #self.logger.error('One loop done')
                 time.sleep(0.8)
                 if len(self.prices)>7200:
                     del self.prices[:3600]
             except Exception as e:
-                self.logger.error('Error : {} Traceback : {}'.format(e, traceback.print_exc()))
+                self.logger.debug('Error : {} Traceback : {}'.format(e, traceback.print_exc()))
                 time.sleep(0.75)
                 
 def run():
     #change to your account, if real account add demo = False
     tr = Trader(userid = 11111111, password = 'blablabla')
-    tr.scan_fx()
-    
-def run10():
-    #change to your account, if real account add demo = False
-    # trying to harvest data with different take profit
-    tr = Trader(userid = 11111111, password = 'blablabla', setbet = 0.01 , stop_loss = 0.0010, take_profit = 0.0010, collection = FxData10)
     tr.scan_fx()
 
 if __name__ == "__main__":
