@@ -329,7 +329,3 @@ def run10():
 if __name__ == "__main__":
     tr = Trader(userid = 11111111)
     tr.scan_fx()
-
-if __name__ == "__main__":
-    tr = Trader(userid = 11111111)
-    tr.scan_fx()
