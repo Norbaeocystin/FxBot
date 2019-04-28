@@ -23,6 +23,7 @@ client = MongoClient('localhost')
 db = client.Bot
 
 FxData = db.FxData
+FxData10 = db.FxData10
 
 
 HEADER ={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36'}
@@ -317,6 +318,16 @@ class Trader():
 def run():
     #change to your account, if real account add demo = False
     tr = Trader(userid = 11111111, password = 'blablabla')
+    tr.scan_fx()
+    
+def run10():
+    #change to your account, if real account add demo = False
+    # trying to harvest data with different take profit
+    tr = Trader(userid = 11111111, password = 'blablabla', setbet = 0.01 , stop_loss = 0.0010, take_profit = 0.0010, collection = FxData10)
+    tr.scan_fx()
+
+if __name__ == "__main__":
+    tr = Trader(userid = 11111111)
     tr.scan_fx()
 
 if __name__ == "__main__":
