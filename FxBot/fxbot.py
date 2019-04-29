@@ -8,9 +8,7 @@ from pymongo import MongoClient
 import requests
 from .xAPIConnector import *
 
-from sklearn.preprocessing import MinMaxScaler
-#tensorflow models
-from FxModel import NNModel, Conv1NNModel, Conv1DropNNModel, normalize_maxmin
+
 
 #logging.getLogger('xAPIConnector').setLevel(logging.ERROR)
 logging.getLogger('pymongo').setLevel(logging.ERROR)
