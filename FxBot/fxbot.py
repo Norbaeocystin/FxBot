@@ -81,7 +81,7 @@ class Trader():
         self.model = False
         if model:
             self.model = model
-        server = 'xapia.x-station.eu'
+        server = 'xapi.xtb.com'
         port = 5124
         streaming_port = 5125
         logging.basicConfig(level=logging.DEBUG, format = '%(asctime)s %(levelname)s %(message)s')
